@@ -1,0 +1,161 @@
+---
+title: "Assignment 1- EDA and Data Preprocessing on Kenyan Student
+Dataset"
+output: pdf_document
+date: "2025-06-12"
+---
+```{r Install required libraries}
+install.packages("tidyverse")
+install.packages("corrplot")
+install.packages("ggplot2")
+install.packages("dplyr")
+
+#Load the libraries
+library(tidyverse)
+library(corrplot)
+library(ggplot2)
+library(dplyr)
+```
+
+#Exploratory Data Analysis (EDA)
+```{r Q1: Load and Inspect the Dataset}
+data <- read_csv("kenya_student_data.csv")
+#home(data)
+#str(data)
+#glimpse(data)
+#summary(data)
+
+#Count how many columns are numeric vs categorical
+column_classes <- sapply (data, class)
+
+# Count numeric columns 
+numeric_count <- sum(column_classes == "numeric")
+
+# Count categorical columns (often "character" or "factor")
+categorical_count <- sum(column_classes == "character")
+
+# Output the counts
+cat("📊 Numeric columns:", numeric_count, "\n")
+cat("🔤 Categorical columns:", categorical_count, "\n")
+```
+
+```{r Q2: Summary Stats for Numerical Variables}
+data |> select(where(is.numeric)) |>  summary()
+
+#What insights do these provide about the data?
+```
+
+```{r Q3: Bar Plot of academic_performance}
+# View class distribution - class counts
+table(data$academic_performance)
+
+#Plot bargraph
+data |> ggplot(aes(academic_performance)) +
+        geom_bar(fill = "skyblue") +
+        labs(title = "Distribution of Academic Performance",
+            x = "Academic Performance",
+            y = "Count") +
+         theme_minimal()
+
+#Is the target variable balanced across its classes?
+#Yes, the bar heights are roughly equal
+```
+
+```{r Q4: Histogram of study_hours_weekly (Urban vs Rural)}
+data |> ggplot(aes(study_hours_weekly)) +
+        geom_histogram (binwidth = 2, fill = "darkorange", color = "white") +
+        facet_wrap(~residency) +
+        labs(title = "Study Hours by Residency", 
+             x = "Study Hours per Week",
+            y = "Number of Students") +
+        theme_minimal()
+
+#How does it vary between urban and rural students? DO URBAN STUDENTS STUDY MORE? 
+#yes, urban students generally study more than rural students
+#Look for: Shifts in the histogram center. Differences in spread or skewness. Outliers or unusual clusters.
+```
+
+```{r Q5: Boxplots of math_score by performance and gender}
+data |> ggplot(aes(x = academic_performance, y = math_score)) +
+        geom_boxplot(aes(fill = gender)) +
+        labs (title= "Math Score by Academic Performance and Gender",
+                x = "Academic Performance",
+                y = "Math Score") +
+        theme_minimal()
+
+ #What patterns do you observe?       
+#What to look for in the plot
+#Median math score across performance categories — does it increase from "Low" to "High"?
+#Spread of scores — are some categories more variable than others?
+#Gender differences — do males and females follow the same patterns?
+#Outliers — any extreme math scores?
+```
+
+```{r Q6: Proportions in extracurricular_activities and faculty}
+# Proportions for extracurricular_activities
+data |> count(extracurricular_activities) |> 
+        mutate(prop = n/ sum(n) *100)
+
+# Proportions for faculty
+data |> count(faculty) |> 
+        mutate(prop = n/ sum(n) *100)
+
+#Which categories are most common?
+```
+
+```{r Q7: Correlation Matrix (exclude student_id)}
+# Select the numeric variables, excluding 'student_id'
+num_data <- data |>  
+    select(where(is.numeric), -student_id)
+
+# Compute correlation matrix
+corr_matrix <- cor(num_data, use = "complete.obs")
+
+# Visualize correlation matrix using a heatmap
+#corrplot(corr_matrix, method = "color", type = "lower")
+corrplot(corr_matrix, method = "color", type = "lower", 
+         tl.col = "black", tl.srt = 45, addCoef.col = "black",
+         number.cex = 0.7)
+
+#Which pairs have the strongest correlations?
+#Look for: Strong positive correlations close to +1 (e.g., math_score vs science_score)
+#Strong negative correlations close to -1 (e.g., possibly absenteeism vs academic_performance_index)
+#Low correlations around 0 indicate weak or no linear relationship.
+```
+
+```{r Q8: Chi-squared Test (internet_access vs academic_performance)}
+## Run chi-squared test using contingency table
+chisq.test(table(data$internet_access, data$academic_performance))
+
+#Explain p-value: significant or not? There is statistical significance
+#If p < 0.05 → there is a statistically significant association between internet_access and academic_performance.
+#If p ≥ 0.05 → no significant association; they are likely independent.
+```
+#Data Preprocessing: Missing Values
+```{r Q9: Identify Missing Values}
+# Calculate number and percentage of missing values per column
+missing_summary <- sapply(data, function(x) sum(is.na(x)) / length(x) * 100)
+missing_summary[missing_summary > 0]
+
+#Why might these variables have missing data in a Kenyan context?
+```
+Why These Might Be Missing (Contextual Insight):
+Family Income (5%) -Sensitive financial info; students may not know or may avoid sharing.
+→ In Kenya, discussing income is often culturally sensitive, especially in lower-income or rural households.
+→ Students may also not be aware of exact figures.
+
+Attendance Rate (5%) -Could be due to poor record-keeping or informal school systems.
+→ Many schools (especially rural) lack digitized records; paper-based systems often have gaps.
+→ Could also reflect inconsistent attendance tracking.
+
+Math Score (3%) -Could be ungraded students, recent transfers, or exam absences.
+→ Students who missed exams due to illness, unpaid fees, or transfer cases.
+→ Some schools might not submit complete results.
+
+Academic Performance (7.82%) -May be missing if performance is yet to be evaluated or withheld.
+→ Could be missing if students are newly admitted, assessments are pending, or results are withheld due to fees.
+
+```{r Q10: Impute family_income and math_score with median}
+
+```
+
