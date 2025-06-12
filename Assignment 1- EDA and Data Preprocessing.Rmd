@@ -1,0 +1,440 @@
+---
+title: "Assignment 1- EDA and Data Preprocessing on Kenyan Student
+Dataset"
+output: pdf_document
+date: "2025-06-12"
+---
+```{r Install required libraries}
+install.packages(c("tidyverse","corrplot", "ggplot2","dplyr"))
+
+#Load the libraries
+library(tidyverse)
+library(corrplot)
+library(ggplot2)
+library(dplyr)
+```
+
+#Exploratory Data Analysis (EDA)
+```{r Q1: Load and Inspect the Dataset}
+data <- read_csv("kenya_student_data.csv")
+#home(data)
+#str(data)
+#glimpse(data)
+#summary(data)
+
+#Count how many columns are numeric vs categorical
+column_classes <- sapply (data, class)
+
+# Count numeric columns 
+numeric_count <- sum(column_classes == "numeric")
+
+# Count categorical columns (often "character" or "factor")
+categorical_count <- sum(column_classes == "character")
+
+# Output the counts
+cat("📊 Numeric columns:", numeric_count, "\n")
+cat("🔤 Categorical columns:", categorical_count, "\n")
+```
+
+```{r Q2: Summary Stats for Numerical Variables}
+data |> select(where(is.numeric)) |>  summary()
+
+#What insights do these provide about the data?
+```
+
+```{r Q3: Bar Plot of academic_performance}
+# View class distribution - class counts
+table(data$academic_performance)
+
+#Plot bargraph
+data |> ggplot(aes(academic_performance)) +
+        geom_bar(fill = "skyblue") +
+        labs(title = "Distribution of Academic Performance",
+            x = "Academic Performance",
+            y = "Count") +
+         theme_minimal()
+
+#Is the target variable balanced across its classes?
+#Yes, the bar heights are roughly equal
+```
+
+```{r Q4: Histogram of study_hours_weekly (Urban vs Rural)}
+data |> ggplot(aes(study_hours_weekly)) +
+        geom_histogram (binwidth = 2, fill = "darkorange", color = "white") +
+        facet_wrap(~residency) +
+        labs(title = "Study Hours by Residency", 
+             x = "Study Hours per Week",
+            y = "Number of Students") +
+        theme_minimal()
+
+#How does it vary between urban and rural students? DO URBAN STUDENTS STUDY MORE? 
+#yes, urban students generally study more than rural students
+#Look for: Shifts in the histogram center. Differences in spread or skewness. Outliers or unusual clusters.
+```
+
+```{r Q5: Boxplots of math_score by performance and gender}
+data |> ggplot(aes(x = academic_performance, y = math_score)) +
+        geom_boxplot(aes(fill = gender)) +
+        labs (title= "Math Score by Academic Performance and Gender",
+                x = "Academic Performance",
+                y = "Math Score") +
+        theme_minimal()
+
+ #What patterns do you observe?       
+#What to look for in the plot
+#Median math score across performance categories — does it increase from "Low" to "High"?
+#Spread of scores — are some categories more variable than others?
+#Gender differences — do males and females follow the same patterns?
+#Outliers — any extreme math scores?
+```
+
+```{r Q6: Proportions in extracurricular_activities and faculty}
+# Proportions for extracurricular_activities
+data |> count(extracurricular_activities) |> 
+        mutate(prop = n/ sum(n) *100)
+
+# Proportions for faculty
+data |> count(faculty) |> 
+        mutate(prop = n/ sum(n) *100)
+
+#Which categories are most common?
+```
+
+```{r Q7: Correlation Matrix (exclude student_id)}
+# Select the numeric variables, excluding 'student_id'
+num_data <- data |>  
+    select(where(is.numeric), -student_id)
+
+# Compute correlation matrix
+corr_matrix <- cor(num_data, use = "complete.obs")
+
+# Visualize correlation matrix using a heatmap
+corrplot(corr_matrix, method = "color", type = "lower")
+
+corrplot(corr_matrix, method = "color", type = "lower", 
+         tl.col = "red", tl.srt = 45, addCoef.col = "black",
+         number.cex = 0.7,  col = colorRampPalette(c("blue", "white", "red"))(200))
+
+#Which pairs have the strongest correlations?
+#Look for: Strong positive correlations close to +1 (e.g., math_score vs science_score)
+#Strong negative correlations close to -1 (e.g., possibly absenteeism vs academic_performance_index)
+#Low correlations around 0 indicate weak or no linear relationship.
+```
+
+```{r Q8: Chi-squared Test (internet_access vs academic_performance)}
+# Create a contingency table
+cont_table <- table(data$internet_access, data$academic_performance)
+
+# Run chi-squared test
+chisq.test(cont_table)
+
+
+#Explain p-value: significant or not? There is statistical significance
+#If p < 0.05 → there is a statistically significant association between internet_access and academic_performance.
+#If p ≥ 0.05 → no significant association; they are likely independent.
+```
+#Data Preprocessing: Missing Values
+```{r Q9: Identify Missing Values}
+# Calculate number and percentage of missing values per column
+missing_summary <- sapply(data, function(x) sum(is.na(x)))
+missing_percent <- round(missing_summary / nrow(data) *100, 2)
+
+# Combine and display
+missing_report <- data.frame( Column = names(missing_summary),
+                              Missing_Count = missing_summary,
+                              Missing_Percent = missing_percent)
+
+# Show only columns with missing data
+missing_report[missing_report$Missing_Count > 0, ]
+
+#Why might these variables have missing data in a Kenyan context?
+```
+Why These Might Be Missing (Contextual Insight):
+Family Income (5%) -Sensitive financial info; students may not know or may avoid sharing.
+→ In Kenya, discussing income is often culturally sensitive, especially in lower-income or rural households.
+→ Students may also not be aware of exact figures.
+
+Attendance Rate (5%) -Could be due to poor record-keeping or informal school systems.
+→ Many schools (especially rural) lack digitized records; paper-based systems often have gaps.
+→ Could also reflect inconsistent attendance tracking.
+
+Math Score (3%) -Could be ungraded students, recent transfers, or exam absences.
+→ Students who missed exams due to illness, unpaid fees, or transfer cases.
+→ Some schools might not submit complete results.
+
+Academic Performance (7.82%) -May be missing if performance is yet to be evaluated or withheld.
+→ Could be missing if students are newly admitted, assessments are pending, or results are withheld due to fees.
+
+```{r Q10: Impute family_income and math_score with median}
+# Impute family_income with median
+median_income <- median(data$family_income, na.rm = TRUE)
+data$family_income[is.na(data$family_income)] <- median_income
+
+# Impute math_score with median
+median_math <- median(data$math_score, na.rm = TRUE)
+data$math_score[is.na(data$math_score)] <- median_math
+
+```
+
+✅ Why Use the Median?
+Robust to outliers:
+Income and exam scores can have extreme values (e.g., very high earners or top scorers). The median is not affected by these outliers, making it more robust than the mean.
+
+Skewed distributions:
+Both family_income and math_score are often right-skewed (especially income). The median better represents the center of such distributions.
+
+```{r Q11: Impute attendance_rate with mean + Histogram}
+# Histogram before imputation
+data |> ggplot(aes(attendance_rate)) +
+      geom_histogram(fill = "skyblue", color = "black", na.rm = TRUE) +
+      labs(title = "Attendance Rate Before Imputation", x = "Attendance Rate", y = "Count")
+
+# Impute missing values with the mean
+data$attendance_rate[is.na(data$attendance_rate)] <- mean(data$attendance_rate, na.rm = TRUE)
+
+# Histogram after imputation
+data |> ggplot(aes(attendance_rate)) +
+        geom_histogram(fill = "tomato", color = "black") +
+        labs(title = "Attendance Rate After Imputation", x = "Attendance Rate", y = "Count")
+
+```
+📝 Why Use the Mean Here?
+attendance_rate is a continuous variable.
+
+The distribution is typically symmetric or mildly skewed for attendance.
+
+Mean imputation retains the central tendency and is acceptable when the missingness is random and small in proportion (5% in your case).
+
+```{r Compare the distributions before and after imputation using histograms.}
+# Copy of original attendance_rate before imputation
+data$attendance_rate_original <- data$attendance_rate
+
+#Impute missing values using the mean
+data$attendance_rate[is.na(data$attendance_rate)] <- mean(data$attendance_rate, na.rm = TRUE)
+
+library(dplyr)
+library(tidyr)
+
+# Prepare data for plotting
+attendance_df <- data |> 
+    select(attendance_rate_original, attendance_rate) |> 
+    pivot_longer(cols = everything(), names_to = "Version", values_to = "Rate") |> 
+    mutate(Version = recode(Version,
+                          "attendance_rate_original" = "Before Imputation",
+                          "attendance_rate" = "After Imputation"))
+
+# Plot overlaid histograms
+ggplot(attendance_df, aes(x = Rate, fill = Version)) +
+  geom_histogram(position = "identity", alpha = 0.5, bins = 30) +
+  labs(title = "Overlayed Histograms of Attendance Rate",
+       x = "Attendance Rate", y = "Count") +
+  scale_fill_manual(values = c("steelblue", "orange")) +
+  theme_minimal()
+
+
+```
+Statistical Impact
+Visual inspection will show a small peak at the mean value in the "After Imputation" version due to imputed entries.
+
+Effect on distribution is minor if missingness is small (~5%), but the tail behavior may be slightly compressed.
+
+Since the mean preserves overall central tendency, it's acceptable when data is fairly symmetric — if highly skewed, median is safer.
+
+#Data Preprocessing: Outliers
+```{r Q12: Detect Outliers (IQR method)}
+# Compute Q1, Q3, and IQR
+Q1 <- quantile(data$family_income, 0.25, na.rm = TRUE)
+Q3 <- quantile(data$family_income, 0.75, na.rm = TRUE)
+IQR<- Q3 - Q1
+
+# Define outlier thresholds
+lower_bound <- Q1 - 1.5 * IQR
+upper_bound <- Q3 + 1.5 * IQR
+
+# Detect outliers
+outliers <- length(data$family_income[data$family_income < lower_bound | data$family_income > upper_bound])
+
+# Print results
+cat("Number of outliers in family income:", outliers, "\n")
+
+#what might they represent in a Kenyan context?
+```
+🧠 Interpretation of outliers in family_income may represent:
+
+High-income families in affluent areas (e.g., Nairobi suburbs, expatriate households, upper-class).
+
+Low outliers may reflect students from marginalized or rural communities.
+
+Could indicate data entry errors (e.g., extra zero added or wrong currency).
+
+Socioeconomic inequality is pronounced in Kenya, so such income variation is realistic and informative.
+
+```{r Q13: Cap Outliers + Boxplot}
+# Cap values 
+data$family_income_capped <- data$family_income
+data$family_income_capped[data$family_income > upper_bound] <- upper_bound
+data$family_income_capped[data$family_income < lower_bound] <- lower_bound
+
+library(tidyr)
+
+# Prepare data for plotting
+income_df <- data |> 
+  select(family_income, family_income_capped) |> 
+  pivot_longer(cols = everything(), names_to = "Version", values_to = "Income") |> 
+  mutate(Version = recode(Version,
+                          "family_income" = "Before Capping",
+                          "family_income_capped" = "After Capping"))
+
+# Plot boxplots
+ggplot(income_df, aes(x = Version, y = Income, fill = Version)) +
+  geom_boxplot(outlier.colour = "red", outlier.shape = 1, width = 0.6) +
+  labs(title = "Boxplot of Family Income Before and After Capping",
+       x = "", y = "Family Income") +
+  theme_minimal()
+
+```
+🧠 Interpretation
+Before Capping: You’ll see extreme values (outliers) far from the box.
+
+After Capping: Outliers are pulled within the upper/lower bounds; reduces skewness and extreme influence.
+
+This is useful for robust statistical modeling.
+
+Capping outliers (also called winsorizing) is a data preprocessing technique where extreme values (outliers) are replaced with a threshold value instead of being removed. This helps reduce the influence of outliers without losing data points entirely.
+
+🔍 Why cap outliers?
+Outliers can:
+
+Skew statistical summaries (like mean, standard deviation)
+
+Distort visualizations (like histograms, boxplots)
+
+Affect machine learning model performance
+
+✅ When to use capping
+When removing outliers would lose valuable data
+
+When models are sensitive to extreme values (like linear regression)
+
+#Data Preprocessing: Feature Engineering
+```{r Q14.Discretize study_hours_weekly into bins}
+# use the cut() function to categorize the continuous variable; discretize into 4 bins ***
+data$study_hours_categorized <- cut(data$study_hours_weekly,
+                      breaks = c(-Inf, 5, 10, 15, Inf), # Define fixed breakpoints
+                      labels = c("Low", "Moderate", "High", "Very High"), right = TRUE)
+
+# Bar plot of the binned variable
+data |> ggplot(aes(study_hours_categorized)) +
+        geom_bar(fill = "steelblue") +
+        #facet_wrap(~academic_performance) +
+        labs(title = "Study Hours per Week (Binned)",
+             x = "Study Hours Category",
+            y = "Number of Students") +
+       theme_minimal()
+
+```
+
+```{r Q15. Discretize family_income into quartiles}
+# Discretize into quartiles with meaningful labels
+data <- data |> 
+  mutate(income_quartile = cut(family_income,
+    breaks = quantile(family_income, probs = c(0, 0.25, 0.5, 0.75, 1), na.rm = TRUE),
+    include.lowest = TRUE,
+    labels = c("Low", "Medium-Low", "Medium-High", "High")))
+
+# correlation with academic_performance using contingency table (counts)
+cont_table <- table(data$income_quartile, data$academic_performance)
+cont_table
+
+# Chi-squared test to statistically assess the relationship
+chisq.test(cont_table)
+
+
+
+```
+🔍 Interpretation:
+High income quartile has a greater proportion of students with Excellent academic performance while the low income quartile has a great proportion of students with Average academic performance. It may suggest a positive association between income and academic performance.
+❌ Conclusion:
+But since p > 0.05, there is no statistically significant association between family income level and academic performance.
+🔍 Possible Explanations (Kenyan context):
+Some students from lower-income households may receive scholarships or support that helps them perform equally well.
+
+```{r Q16. Create average score}
+# Create total_score by averaging the three subject scores
+data$total_score <- rowMeans(data[, c("math_score", "science_score", "english_score")], na.rm = TRUE)
+
+# Plot the distribution of total_score
+data |> ggplot(aes(x = total_score)) +
+        geom_histogram(binwidth = 4, fill = "salmon", color = "black") +
+      labs(title = "Distribution of Total Score",
+       x = "Total Score (Average of 3 Subjects)",
+       y = "Number of Students") +
+      theme_minimal()
+```
+
+#Data Preprocessing: Relationships
+```{r Q17. Contingency table}
+activity_perf <- table(data$extracurricular_activities, data$academic_performance)
+activity_perf
+
+#What patterns suggest about student involvement?
+
+chisq.test(activity_perf)
+```
+🔍 Quick Observations
+"None" group has slightly more students with Poor and Good performance compared to other categories. 
+"Both" has higher counts in "Average" followed by "Poor"
+"SPorts" group has the highest number of students with "Excellent" performance
+—potentially suggesting a positive link between extracurricular activity and academic performance.
+
+📌 Chisquare Interpretation
+Since the p-value is much greater than 0.05, we fail to reject the null hypothesis.
+
+This means there is no statistically significant association between extracurricular_activities and academic_performance based on your data.
+
+🧠 What This Suggests:
+Participation in extracurriculars does not have a strong or significant influence on academic performance in this dataset. There might be other confounding factors (e.g., socio-economic status, time management skills) that play a larger role.
+
+```{r Q18: Scatter Plot}
+#scatter plot between study_hours_weekly and total_score colored by residency
+data |> ggplot(aes(study_hours_weekly, total_score, color = residency)) +
+        geom_point(alpha = 0.6) +
+        geom_smooth(method = "lm", se = FALSE, linetype = "dashed") +
+        labs(title = "Study Hours vs Total Score by Residency",
+              x = "Weekly Study Hours",
+              y = "Total Score") +
+        theme_minimal()
+
+
+
+```
+The regression line (from lm(total_score ~ study_hours_weekly)) cuts through the middle because it’s a single global trend across all students, regardless of residency.
+
+Urban and Rural points appear similarly spread – this suggests that:
+The relationship between study_hours_weekly and total_score is not strongly different between Urban and Rural students.
+Or there might be very little overall correlation between study hours and total score, regardless of residency.
+
+```{r Save preprocessed dataset}
+# fitting and plotting separate regression lines
+plot(data$study_hours_weekly, data$total_score,
+     col = ifelse(data$residency == "Urban", "salmon", "seagreen"),
+     pch = 19,
+     xlab = "Weekly Study Hours",
+     ylab = "Total Score",
+     main = "Study Hours vs Total Score by Residency")
+
+# Separate linear models
+lm_urban <- lm(total_score ~ study_hours_weekly, data = subset(data, residency == "Urban"))
+lm_rural <- lm(total_score ~ study_hours_weekly, data = subset(data, residency == "Rural"))
+
+# Add separate trend lines
+abline(lm_urban, col = "salmon", lwd = 2)
+abline(lm_rural, col = "seagreen", lwd = 2)
+
+# Add legend
+legend("bottomright", legend = c("Urban", "Rural"), col = c("salmon", "seagreen"), lwd = 2)
+
+write_csv(data, "kenya_student_data_preprocessed.csv")
+
+```
+both lines are flat → no strong relationship between study time and total score.
