@@ -18,8 +18,8 @@ Study hours, total scores, and family income displayed relatively balanced distr
 ```bash
 Kenya_students_data_project/
 ├── data/
-│   ├── kenya_student_data.csv              # Raw dataset (n=2,450 records)
-│   └── kenya_student_data_preprocessed.csv # Cleaned dataset (after processing)
+│   ├── kenya_student_data.csv              # Raw dataset 
+│   └── kenya_student_data_preprocessed.csv # Cleaned dataset (after preprocessing)
 │
 ├── scripts/
 │   └── eda_preprocessing.R                 # Main analysis pipeline
