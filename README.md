@@ -13,25 +13,33 @@ Source or run it in your R environment (RStudio / VS Code)
 Study hours, total scores, and family income displayed relatively balanced distributions, with no strong correlations between income and academic performance. Urban students generally studied more weekly, though math performance varied little by gender or achievement level. Outliers in family income were adjusted to limit their influence. Notably, extracurricular activities showed no significant link to academic outcomes. These findings provide a basis for future predictive modeling or policy interventions to enhance education in Kenya.
 
 **Structure of the repository**
+# Kenya Students Academic Performance Analysis
+
+![Data Analysis](https://img.shields.io/badge/analysis-EDA-blue) ![R](https://img.shields.io/badge/language-R-276DC3) ![License](https://img.shields.io/badge/license-MIT-green)
+
+
+## 📂 Repository Structure
+
+```bash
 Kenya_students_data_project/
 ├── data/
-│ ├── kenya_student_data.csv # Original dataset
-│ └── kenya_student_data_preprocessed.csv # Dataset after preprocessing
+│   ├── kenya_student_data.csv              # Raw dataset (n=2,450 records)
+│   └── kenya_student_data_preprocessed.csv # Cleaned dataset (after processing)
 │
 ├── scripts/
-│ ├── eda_preprocessing.R # R script for EDA and preprocessing
+│   └── eda_preprocessing.R                 # Main analysis pipeline
 │
 ├── reports/
-│ ├── Assignment 1- EDA and Data Preprocessing.R # R script file
-│ └── Assignment 1- EDA and Data Preprocessing.pdf # PDF output (final report)
+│   ├── Assignment 1- EDA and Data Preprocessing.R  # Comprehensive analysis
+│   └── Assignment 1- EDA and Data Preprocessing.pdf # 15-page final report
 │
-├── figures/
-│ ├── study_hours_histogram.png # Example of a plot
-│ ├── math_score_boxplot.png # Example of a boxplot
-│ ├── family_income_boxplot_before.png
-│ ├── family_income_boxplot_after.png
-│ └── total_score_scatter.png
+├── figures/                                # Visualizations
+│   ├── study_hours_histogram.png           # Weekly study distribution
+│   ├── math_score_boxplot.png              # Math scores by gender
+│   ├── family_income_boxplot_before.png    # Original income distribution
+│   ├── family_income_boxplot_after.png     # Processed income
+│   └── total_score_scatter.png             # Score correlations
 │
-│ └── README.md # Project overview and instructions
+└── README.md                               # Project documentation
 
 
